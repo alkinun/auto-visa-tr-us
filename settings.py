@@ -2,11 +2,8 @@
 SENDER_EMAIL = "alkinunl@gmail.com"
 APP_KEY_GMAIL = "cenw fcwi zcih ediz"
 
-SEND_EMAIL = True
-AUTO_RESCHEDULE = True
-
 SHOW_GUI = False
-TEST_MODE = True #doesnt press `confirm reschedule` btn
+TEST_MODE = False # Doesnt press `confirm reschedule` btn
 
 # Don't change the following unless you know what you are doing said the wise portuguese man
 DETACH = True

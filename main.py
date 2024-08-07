@@ -23,8 +23,6 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import scrolledtext
 from tkcalendar import DateEntry
-from tktimepicker import SpinTimePickerOld
-from tktimepicker import constants
 
 
 
@@ -34,7 +32,7 @@ from tktimepicker import constants
 
 root = tk.Tk()
 root.title("Amerika Erken Randevu Botu")
-root.geometry("512x680")
+root.geometry("512x690")
 
 # Configure the grid
 root.grid_columnconfigure(0, weight=1)
@@ -56,8 +54,6 @@ def start():
         CONSULATE_LOGIN = consulate_combobox.get()
         START_DATE = start_date.get_date()
         END_DATE = end_date.get_date()
-        START_TIME = datetime.strptime(str(start_time_hour.time()[0]) + ":" + str(start_time_hour.time()[1]), "%H:%M").time()
-        END_TIME = datetime.strptime(str(end_time_hour.time()[0]) + ":" + str(end_time_hour.time()[1]), "%H:%M").time()
         NOTIFICACION_EMAIL = notification_email_entry.get()
 
         if EMAIL_LOGIN == "" or PASSWORD_LOGIN == "" or CONSULATE_LOGIN == "" or START_DATE == "" or END_DATE == "" or NOTIFICACION_EMAIL == "":
@@ -112,22 +108,6 @@ end_date_label.grid(row=5, column=0, sticky="e", padx=10, pady=5)
 end_date = DateEntry(root, date_pattern="yyyy-mm-dd", width=43)
 end_date.grid(row=5, column=1, padx=10, pady=5, sticky="w")
 
-# Müsait En Erken Saat
-start_time_label = tk.Label(root, text="Müsait En Erken Saat")
-start_time_label.grid(row=6, column=0, sticky="e", padx=10, pady=5)
-
-start_time_hour = SpinTimePickerOld(root)
-start_time_hour.addAll(constants.HOURS24)
-start_time_hour.grid(row=6, column=1, padx=10, pady=5, sticky="w")
-
-# Müsait En Geç Saat
-end_time_label = tk.Label(root, text="Müsait En Geç Saat")
-end_time_label.grid(row=7, column=0, sticky="e", padx=10, pady=5)
-
-end_time_hour = SpinTimePickerOld(root)
-end_time_hour.addAll(constants.HOURS24)
-end_time_hour.grid(row=7, column=1, padx=10, pady=5, sticky="w")
-
 # Bilgilendirme E-postası
 notification_email_label = tk.Label(root, text="Bilgilendirme E-postası")
 notification_email_label.grid(row=8, column=0, sticky="e", padx=10, pady=5)
@@ -138,17 +118,37 @@ notification_email_entry.grid(row=8, column=1, padx=10, pady=5, sticky="w")
 divider = ttk.Separator(root, orient="horizontal")
 divider.grid(row=9, column=0, columnspan=2, pady=10, sticky="ew")
 
-# Başlat
-button = tk.Button(root, text="Başlat", width=20, bg="lightgreen", command=start_thread)
-button.grid(row=10, column=0, columnspan=2, pady=10)
+# Mail Gönderilsin
+send_mail_label = tk.Label(root, text="E-mail Gönderilsin")
+send_mail_label.grid(row=10, column=0, sticky="e", padx=10)
+
+SEND_EMAIL = tk.IntVar()
+send_mail_btn = tk.Checkbutton(root, variable=SEND_EMAIL)
+send_mail_btn.grid(row=10, column=1, padx=10)
+
+# Otomatik Rezervasyon
+auto_reschedule_label = tk.Label(root, text="Otomatik Rezervasyon")
+auto_reschedule_label.grid(row=11, column=0, sticky="e", padx=10)
+
+AUTO_RESCHEDULE = tk.IntVar()
+auto_reschedule_btn = tk.Checkbutton(root, variable=AUTO_RESCHEDULE)
+auto_reschedule_btn.grid(row=11, column=1, padx=10)
 
 # Divider
 divider = ttk.Separator(root, orient="horizontal")
-divider.grid(row=11, column=0, columnspan=2, pady=10, sticky="ew")
+divider.grid(row=12, column=0, columnspan=2, pady=10, sticky="ew")
+
+# Başlat
+button = tk.Button(root, text="Başlat", width=20, bg="lightgreen", command=start_thread)
+button.grid(row=13, column=0, columnspan=2, pady=10)
+
+# Divider
+divider = ttk.Separator(root, orient="horizontal")
+divider.grid(row=14, column=0, columnspan=2, pady=10, sticky="ew")
 
 # Log
 log = scrolledtext.ScrolledText(root, state="disabled", height=16)
-log.grid(row=12, column=0, columnspan=2, pady=10)
+log.grid(row=15, column=0, columnspan=2, pady=10)
 
 
 
@@ -209,8 +209,12 @@ def get_chrome_driver() -> WebDriver:
         options.add_argument("window-size=1920x1080")
         options.add_argument("disable-gpu")
     options.add_experimental_option("detach", DETACH)
+
+    chrome_driver_path = ChromeDriverManager().install().replace("THIRD_PARTY_NOTICES.chromedriver", "chromedriver.exe")
+    print("Corrected ChromeDriver path:", chrome_driver_path)
+
     driver = webdriver.Chrome(
-        service=Service(ChromeDriverManager().install()), options=options
+        service=Service(chrome_driver_path), options=options
     )
     return driver
 
@@ -269,20 +273,14 @@ def reschedule(driver: WebDriver, date) -> None:
     date_input.send_keys(Keys.ENTER)
     date_input.send_keys(Keys.ESCAPE)
 
+    sleep(12)
+
+    time_input = WebDriverWait(driver, timeout).until(
+        EC.element_to_be_clickable((By.XPATH, f"/html/body/div[4]/main/div[4]/div/div/form/fieldset/ol/fieldset/div/div[2]/div[3]/li[2]/select/option[2]"))
+    )
+    time_input.click()
+
     sleep(3)
-
-    for i in range(2, 21):
-        try:
-            time_input = WebDriverWait(driver, timeout).until(
-                EC.element_to_be_clickable((By.XPATH, f"/html/body/div[4]/main/div[4]/div/div/form/fieldset/ol/fieldset/div/div[2]/div[3]/li[2]/select/option[{i}]"))
-            )
-            if START_TIME <= datetime.strptime(time_input.text, "%H:%M").time() <= END_TIME:
-                time_input.click()
-                break
-        except:
-            break
-
-    sleep(1)
 
     reschedule_button = WebDriverWait(driver, timeout).until(
         EC.element_to_be_clickable((By.NAME, "commit"))
@@ -358,20 +356,14 @@ def reschedule_and_send_mail(driver: WebDriver) -> bool:
                     f"{datetime.now().strftime('%H:%M:%S')} FOUND SLOT ON {date}!!!"
                 )
                 insert_log(f"Boş tarih bulundu: {date}")
-                try:
-                    if SEND_EMAIL:
-                        send_email(SENDER_EMAIL, NOTIFICACION_EMAIL, str(date), APP_KEY_GMAIL)
-                        insert_log("Email gönderildi")
+                if AUTO_RESCHEDULE:
+                    reschedule(driver, date)
+                    insert_log("Otomatik rezervasyon yapıldı")
 
-                    if AUTO_RESCHEDULE:
-                        reschedule(driver, date)
-                        insert_log("Otomatik rezervasyon yapıldı")
-
-                    return
-                except Exception as e:
-                    print("Rescheduling failed: ", e)
-                    traceback.print_exc()
-                    continue
+                if SEND_EMAIL:
+                    send_email(SENDER_EMAIL, NOTIFICACION_EMAIL, "Ais E-Mail: " + EMAIL_LOGIN + "\nAçılan tarih: " + str(date), APP_KEY_GMAIL)
+                    insert_log("Email gönderildi")
+                return
         print(
             f"{datetime.now().strftime('%H:%M:%S')} Not found"
         )
