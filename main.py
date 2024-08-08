@@ -40,11 +40,6 @@ root.grid_columnconfigure(1, weight=1)
 
 START_STATE = False
 
-def insert_log(text):
-    log.configure(state="normal")
-    log.insert("end", f"[{time.strftime('%H:%M:%S')}] {text}\n")
-    log.configure(state="disabled")
-
 def start():
     global START_STATE
     if not START_STATE:
@@ -149,6 +144,15 @@ divider.grid(row=14, column=0, columnspan=2, pady=10, sticky="ew")
 # Log
 log = scrolledtext.ScrolledText(root, state="disabled", height=16)
 log.grid(row=15, column=0, columnspan=2, pady=10)
+log.configure(state="normal")
+log.see("end")
+log.configure(state="disabled")
+
+def insert_log(text):
+    log.configure(state="normal")
+    log.insert("end", f"[{time.strftime('%H:%M:%S')}] {text}\n")
+    log.see("end")
+    log.configure(state="disabled")
 
 
 
