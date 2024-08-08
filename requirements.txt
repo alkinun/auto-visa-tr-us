@@ -1,0 +1,4 @@
+Requests==2.32.3
+selenium==4.23.1
+tkcalendar==1.6.1
+webdriver_manager==4.0.2
