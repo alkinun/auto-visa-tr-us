@@ -1,5 +1,4 @@
 import re
-import traceback
 from datetime import datetime
 from time import sleep
 import time
@@ -43,9 +42,9 @@ START_STATE = False
 def start():
     global START_STATE
     if not START_STATE:
-        global EMAIL_LOGIN, PASSWORD_LOGIN, CONSULATE_LOGIN, START_DATE, END_DATE, START_TIME, END_TIME, NOTIFICACION_EMAIL
-        EMAIL_LOGIN = email_entry.get()
-        PASSWORD_LOGIN = password_entry.get()
+        global EMAIL_LOGIN, PASSWORD_LOGIN, CONSULATE_LOGIN, START_DATE, END_DATE, SEND_EMAIL, AUTO_RESCHEDULE, NOTIFICACION_EMAIL
+        EMAIL_LOGIN = "dnzcrpn@hotmail.com" #email_entry.get()
+        PASSWORD_LOGIN = "G$tPgDeW6#?mpDa" #password_entry.get()
         CONSULATE_LOGIN = consulate_combobox.get()
         START_DATE = start_date.get_date()
         END_DATE = end_date.get_date()
@@ -63,6 +62,8 @@ def start():
             session_count += 1
             reschedule_and_send_mail_with_new_session()
             time.sleep(NEW_SESSION_DELAY)
+    else:
+        insert_log("Zaten başlatıldı")
 
 def start_thread():
     thread = threading.Thread(target=start)
@@ -118,7 +119,7 @@ send_mail_label = tk.Label(root, text="E-mail Gönderilsin")
 send_mail_label.grid(row=10, column=0, sticky="e", padx=10)
 
 SEND_EMAIL = tk.IntVar()
-send_mail_btn = tk.Checkbutton(root, variable=SEND_EMAIL)
+send_mail_btn = tk.Checkbutton(root, onvalue=1, offvalue=0, variable=SEND_EMAIL)
 send_mail_btn.grid(row=10, column=1, padx=10)
 
 # Otomatik Rezervasyon
@@ -126,7 +127,7 @@ auto_reschedule_label = tk.Label(root, text="Otomatik Rezervasyon")
 auto_reschedule_label.grid(row=11, column=0, sticky="e", padx=10)
 
 AUTO_RESCHEDULE = tk.IntVar()
-auto_reschedule_btn = tk.Checkbutton(root, variable=AUTO_RESCHEDULE)
+auto_reschedule_btn = tk.Checkbutton(root, onvalue=1, offvalue=0, variable=AUTO_RESCHEDULE)
 auto_reschedule_btn.grid(row=11, column=1, padx=10)
 
 # Divider
@@ -210,9 +211,6 @@ def get_chrome_driver() -> WebDriver:
     options = webdriver.ChromeOptions()
     if not SHOW_GUI:
         options.add_argument("headless")
-        options.add_argument("window-size=1920x1080")
-        options.add_argument("disable-gpu")
-    options.add_experimental_option("detach", DETACH)
 
     chrome_driver_path = ChromeDriverManager().install().replace("THIRD_PARTY_NOTICES.chromedriver", "chromedriver.exe")
     print("Corrected ChromeDriver path:", chrome_driver_path)
@@ -260,41 +258,47 @@ def reschedule(driver: WebDriver, date) -> None:
     timeout = TIMEOUT
     if CONSULATE_LOGIN == "Ankara":
         consular_input = WebDriverWait(driver, timeout).until(
-            EC.element_to_be_clickable((By.XPATH, "/html/body/div[4]/main/div[4]/div/div/form/fieldset/ol/fieldset/div/div[2]/div[1]/div/li/select/option[2]"))
+            EC.element_to_be_clickable((By.XPATH, """//*[@id="appointments_consulate_appointment_facility_id"]/option[2]"""))
         )
     elif CONSULATE_LOGIN == "Istanbul":
         consular_input = WebDriverWait(driver, timeout).until(
-            EC.element_to_be_clickable((By.XPATH, "/html/body/div[4]/main/div[4]/div/div/form/fieldset/ol/fieldset/div/div[2]/div[1]/div/li/select/option[3]"))
+            EC.element_to_be_clickable((By.XPATH, """//*[@id="appointments_consulate_appointment_facility_id"]/option[3]"""))
         )
     consular_input.click()
 
     sleep(1)
 
     date_input = WebDriverWait(driver, timeout).until(
-        EC.element_to_be_clickable((By.XPATH, "/html/body/div[4]/main/div[4]/div/div/form/fieldset/ol/fieldset/div/div[2]/div[3]/li[1]/input"))
+        EC.element_to_be_clickable((By.XPATH, """//*[@id="appointments_consulate_appointment_date"]"""))
     )
     driver.execute_script("arguments[0].value = arguments[1];", date_input, date.strftime("%Y-%m-%d"))
     date_input.send_keys(Keys.ENTER)
-    date_input.send_keys(Keys.ESCAPE)
 
-    sleep(12)
+    sleep(6)
 
     time_input = WebDriverWait(driver, timeout).until(
-        EC.element_to_be_clickable((By.XPATH, f"/html/body/div[4]/main/div[4]/div/div/form/fieldset/ol/fieldset/div/div[2]/div[3]/li[2]/select/option[2]"))
+        EC.element_to_be_clickable((By.XPATH, f"""//*[@id="appointments_consulate_appointment_time"]"""))
+    )
+    driver.execute_script("arguments[0].click();", time_input)
+
+    sleep(6)
+
+    time_input = WebDriverWait(driver, timeout).until(
+        EC.element_to_be_clickable((By.XPATH, f"""//*[@id="appointments_consulate_appointment_time"]/option[2]"""))
     )
     time_input.click()
 
-    sleep(3)
+    sleep(6)
 
     reschedule_button = WebDriverWait(driver, timeout).until(
-        EC.element_to_be_clickable((By.NAME, "commit"))
+        EC.element_to_be_clickable((By.XPATH, """//*[@id="appointments_submit"]"""))
     )
     reschedule_button.click()
 
     if not TEST_MODE:
-        time.sleep(1)
+        time.sleep(3)
         confirm_button = WebDriverWait(driver, timeout).until(
-            EC.element_to_be_clickable((By.XPATH, "/html/body/div[7]/div/div/a[2]"))
+            EC.element_to_be_clickable((By.XPATH, """/html/body/div[6]/div/div/a[2]"""))
         )
         confirm_button.click()
     return
@@ -343,6 +347,7 @@ def get_available_dates(
         print("Failed to decode json")
         return None
     dates = [datetime.strptime(item["date"], "%Y-%m-%d").date() for item in dates_json]
+    print(dates)
     return dates
 
 
@@ -356,18 +361,22 @@ def reschedule_and_send_mail(driver: WebDriver) -> bool:
 
         for date in dates:
             if START_DATE < date < END_DATE:
-                print(
-                    f"{datetime.now().strftime('%H:%M:%S')} FOUND SLOT ON {date}!!!"
-                )
-                insert_log(f"Boş tarih bulundu: {date}")
-                if AUTO_RESCHEDULE:
-                    reschedule(driver, date)
-                    insert_log("Otomatik rezervasyon yapıldı")
+                try:
+                    print(
+                        f"{datetime.now().strftime('%H:%M:%S')} FOUND SLOT ON {date}!!!"
+                    )
+                    insert_log(f"Boş tarih bulundu: {date}")
+                    if AUTO_RESCHEDULE.get():
+                        reschedule(driver, date)
+                        insert_log("Otomatik rezervasyon yapıldı")
 
-                if SEND_EMAIL:
-                    send_email(SENDER_EMAIL, NOTIFICACION_EMAIL, "Ais E-Mail: " + EMAIL_LOGIN + "\nAçılan tarih: " + str(date), APP_KEY_GMAIL)
-                    insert_log("Email gönderildi")
-                return
+                    if SEND_EMAIL.get():
+                        send_email(SENDER_EMAIL, NOTIFICACION_EMAIL, "Ais E-Mail: " + EMAIL_LOGIN + "\nAçılan tarih: " + str(date), APP_KEY_GMAIL)
+                        insert_log("Email gönderildi")
+                    return
+                except Exception as e:
+                    print("Reschedule and send mail failed: ", e)
+                    continue
         print(
             f"{datetime.now().strftime('%H:%M:%S')} Not found"
         )
