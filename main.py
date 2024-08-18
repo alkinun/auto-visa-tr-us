@@ -43,8 +43,8 @@ def start():
     global START_STATE
     if not START_STATE:
         global EMAIL_LOGIN, PASSWORD_LOGIN, CONSULATE_LOGIN, START_DATE, END_DATE, SEND_EMAIL, AUTO_RESCHEDULE, NOTIFICACION_EMAIL
-        EMAIL_LOGIN = "dnzcrpn@hotmail.com" #email_entry.get()
-        PASSWORD_LOGIN = "G$tPgDeW6#?mpDa" #password_entry.get()
+        EMAIL_LOGIN = email_entry.get()
+        PASSWORD_LOGIN = password_entry.get()
         CONSULATE_LOGIN = consulate_combobox.get()
         START_DATE = start_date.get_date()
         END_DATE = end_date.get_date()
