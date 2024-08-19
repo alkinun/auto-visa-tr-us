@@ -266,7 +266,7 @@ def reschedule(driver: WebDriver, date) -> None:
         )
     consular_input.click()
 
-    sleep(1)
+    sleep(2)
 
     date_input = WebDriverWait(driver, timeout).until(
         EC.element_to_be_clickable((By.XPATH, """//*[@id="appointments_consulate_appointment_date"]"""))
@@ -274,21 +274,21 @@ def reschedule(driver: WebDriver, date) -> None:
     driver.execute_script("arguments[0].value = arguments[1];", date_input, date.strftime("%Y-%m-%d"))
     date_input.send_keys(Keys.ENTER)
 
-    sleep(6)
+    sleep(8)
 
     time_input = WebDriverWait(driver, timeout).until(
         EC.element_to_be_clickable((By.XPATH, f"""//*[@id="appointments_consulate_appointment_time"]"""))
     )
     driver.execute_script("arguments[0].click();", time_input)
 
-    sleep(6)
+    sleep(8)
 
     time_input = WebDriverWait(driver, timeout).until(
         EC.element_to_be_clickable((By.XPATH, f"""//*[@id="appointments_consulate_appointment_time"]/option[2]"""))
     )
     time_input.click()
 
-    sleep(6)
+    sleep(8)
 
     reschedule_button = WebDriverWait(driver, timeout).until(
         EC.element_to_be_clickable((By.XPATH, """//*[@id="appointments_submit"]"""))
@@ -296,7 +296,7 @@ def reschedule(driver: WebDriver, date) -> None:
     reschedule_button.click()
 
     if not TEST_MODE:
-        time.sleep(3)
+        time.sleep(6)
         confirm_button = WebDriverWait(driver, timeout).until(
             EC.element_to_be_clickable((By.XPATH, """/html/body/div[6]/div/div/a[2]"""))
         )
@@ -391,6 +391,7 @@ def reschedule_and_send_mail_with_new_session() -> bool:
     while session_failures < NEW_SESSION_AFTER_FAILURES:
         try:
             login(driver)
+            sleep(20)
             get_appointment_page(driver)
             break
         except Exception as e:
